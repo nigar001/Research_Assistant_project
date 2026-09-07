@@ -21,19 +21,19 @@ If one member contributed less than 10% without a documented reason (illness, em
 
 ---
 
-## Member A — _[Nigar Alimammadov]_ (`@github-handle`)
+## Member A — _[Nigar Alimammadov]_ (`@nigar001`)
 
 **Owned (sole author of these files / PRs):**
 
 - `src/config.py`
-- `src/services/ai_service.py`
-- `tests/test_services.py`
+- `src/models.py`
+- `src/concurrency/orchestrator.py`
+- `src/core/researcher.py`
 - PRs: #_[list]_
 
 **Co-owned (paired or substantially edited):**
 
-- `src/api.py` (with Member B)
-- _[other co-owned components]_
+- _[list]_
 
 **Reviewed (PRs reviewed and merged):**
 
@@ -43,25 +43,33 @@ If one member contributed less than 10% without a documented reason (illness, em
 
 ---
 
-## Member B — _[Farid Dilaverli]_ (`@github-handle`)
+## Member B — _[Farid Dilaverli]_ (`@faridqul`)
 
 **Owned:**
 
-- _[list]_
+- `src/storage/cache_store.py` (TTL cache: `CacheStore` ABC, JSON backend, `NullCacheStore`)
+- `src/services/ai_service.py` (retries, backoff, logging around `ai.synthesize`)
+- `src/cli.py` and `researcher/` (the `ask` command and its entry point)
+- `tests/test_cache_store.py`, `tests/test_ai_service.py`, `tests/test_cli.py`
+- `requirements.txt`
+- PRs: #1 (merged), #_[list]_
 
 **Co-owned:**
 
-- _[list]_
+- `.gitignore`, `AI.instructions.md` (shared project docs)
 
 **Reviewed:**
 
-- _[list]_
+- PRs: #_[list]_
 
 **Approximate share of commits:** _[33]_%
 
 ---
 
 ## Member C — _[Sahib Aliyev]_ (`@github-handle`)
+
+_Slice: shared `httpx.AsyncClient`, per-source `asyncio.timeout()` wrappers, retry/backoff
+on the fetchers, the `respx` offline test suite, the Dockerfile._
 
 **Owned:**
 
