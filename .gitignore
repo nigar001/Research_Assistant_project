@@ -1,5 +1,6 @@
 .env
-venv/
+.venv/
 __pycache__/
 *.pyc
-.pytest_cache/
+.pytest_cache/CLAUDE.local.md
+CLAUDE.local.md
