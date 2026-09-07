@@ -1,30 +1,66 @@
+import os
+from pathlib import Path
 from pydantic import Field
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    # LLM Settings
-    llm_provider: str = "gemini"
-    llm_model: str = "gemini-1.5-flash"
-    
-    # Matches GEMINI_API_KEY in .env
-    gemini_api_key: str = Field(default="", validation_alias="GEMINI_API_KEY")
+    """Application configuration loaded from environment variables or .env file."""
 
-    # Web Search Settings
-    web_search_provider: str = "tavily"
-    tavily_api_key: str = Field(default="", validation_alias="TAVILY_API_KEY")
+    # Provider Options
+    llm_provider: str = Field(
+        default="gemini",
+        description="LLM Provider to use: 'anthropic', 'openai', or 'gemini'",
+    )
+    llm_model: str = Field(
+        default="gemini-2.5-flash",
+        description="Model name for the selected LLM provider",
+    )
+    web_search_provider: str = Field(
+        default="duckduckgo",
+        description="Web search provider: 'tavily', 'serper', or 'duckduckgo'",
+    )
 
-    # SE Layer Operational Settings
-    log_level: str = "INFO"
-    cache_dir: str = "./.cache"
-    cache_ttl_seconds: int = 86400
-    per_source_timeout_seconds: float = 10.0
-    max_sources_per_query: int = 3
+    # API Keys (Optional defaults allow offline/DDG mode)
+    anthropic_api_key: str | None = Field(default=None, alias="ANTHROPIC_API_KEY")
+    openai_api_key: str | None = Field(default=None, alias="OPENAI_API_KEY")
+    gemini_api_key: str | None = Field(default=None, alias="GEMINI_API_KEY")
+    tavily_api_key: str | None = Field(default=None, alias="TAVILY_API_KEY")
+    serper_api_key: str | None = Field(default=None, alias="SERPER_API_KEY")
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        extra = "ignore"
+    # Timeouts & Concurrency
+    per_source_timeout_seconds: float = Field(
+        default=8.0,
+        description="Maximum seconds allowed per source fetch before timing out",
+    )
+    max_retries: int = Field(
+        default=3,
+        description="Maximum exponential backoff retries for transient HTTP/LLM errors",
+    )
+
+    # Cache Settings
+    cache_dir: Path = Field(
+        default=Path(".cache"),
+        description="Directory used for filesystem disk cache storage",
+    )
+    cache_ttl_seconds: int = Field(
+        default=86400,
+        description="Cache TTL in seconds (default is 24 hours)",
+    )
+
+    # Logging
+    log_level: str = Field(
+        default="INFO",
+        description="Application log level: DEBUG, INFO, WARNING, ERROR",
+    )
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+        case_sensitive=False,
+    )
 
 
+# Global singleton instance
 settings = Settings()
