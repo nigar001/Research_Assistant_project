@@ -1,0 +1,20 @@
+# SE-layer dependencies — the code WE write (src/, tests/, cli).
+#
+# The provided ai/ package has its own list in requirements-ai.txt; keep the two
+# separate so it stays obvious which dependencies are ours. A full environment
+# installs both:
+#
+#     uv pip install -r requirements-ai.txt -r requirements.txt
+
+# --- configuration ---
+pydantic-settings>=2.0      # typed env-var settings for src/config.py
+python-dotenv>=1.0          # loads .env into the environment so ai/ can read it
+
+# --- testing ---
+pytest-cov>=5.0             # coverage measurement; the rubric requires >=60%
+respx>=0.21                 # mocks httpx so the test suite never touches the network
+
+# --- LLM provider SDK ---
+# requirements-ai.txt lists these behind `extra ==` markers, which a plain
+# `pip install -r` skips. Declare the one we actually run so Docker works.
+openai>=1.50.0              # LLM_PROVIDER=openai, model gpt-4o-mini
