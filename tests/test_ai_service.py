@@ -1,0 +1,244 @@
+"""Tests for the synthesis service. No network: fake LLMs and an injected sleep."""
+
+from __future__ import annotations
+
+import asyncio
+import time
+
+import pytest
+
+from ai.providers.base import ProviderError
+from ai.schemas import AnswerWithCitations
+from src.services.ai_service import (
+    MAX_QUESTION_LENGTH,
+    _backoff_seconds,
+    synthesize_with_retry,
+)
+from tests.conftest import FakeLLM
+
+QUESTION = "What is photosynthesis?"
+
+
+class FlakyLLM(FakeLLM):
+    """Raises for the first `failures` calls, then behaves like FakeLLM."""
+
+    def __init__(self, failures: int, exc: Exception | None = None) -> None:
+        super().__init__()
+        self.failures = failures
+        self.exc = exc or ProviderError("provider unavailable")
+
+    def complete(self, prompt, *, json_schema=None, max_tokens=1024):
+        self.calls.append(prompt)
+        if len(self.calls) <= self.failures:
+            raise self.exc
+        return self.response
+
+
+class RecordingSleep:
+    """Stands in for asyncio.sleep so backoff can be asserted, not waited for."""
+
+    def __init__(self) -> None:
+        self.delays: list[float] = []
+
+    async def __call__(self, seconds: float) -> None:
+        self.delays.append(seconds)
+
+
+@pytest.fixture
+def sleep() -> RecordingSleep:
+    return RecordingSleep()
+
+
+# --- the happy path -----------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_successful_call_returns_the_answer(fake_llm, sample_sources, sleep):
+    answer = await synthesize_with_retry(
+        QUESTION, sample_sources, llm=fake_llm, sleep=sleep
+    )
+    assert isinstance(answer, AnswerWithCitations)
+    assert answer.question == QUESTION
+    assert answer.answer == fake_llm.response
+    assert len(fake_llm.calls) == 1
+    assert sleep.delays == []
+
+
+@pytest.mark.asyncio
+async def test_sources_reach_the_prompt(fake_llm, sample_sources, sleep):
+    await synthesize_with_retry(QUESTION, sample_sources, llm=fake_llm, sleep=sleep)
+    prompt = fake_llm.calls[0]
+    assert QUESTION in prompt
+    for source in sample_sources:
+        assert source.title in prompt
+
+
+@pytest.mark.asyncio
+async def test_citations_are_resolved_from_the_answer(fake_llm, sample_sources, sleep):
+    answer = await synthesize_with_retry(
+        QUESTION, sample_sources, llm=fake_llm, sleep=sleep
+    )
+    # The default fake response cites [1] and [2].
+    assert [c.index for c in answer.citations] == [1, 2]
+    assert answer.citations[0].source == sample_sources[0]
+
+
+# --- retry behaviour ----------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_transient_failure_is_retried_then_succeeds(sample_sources, sleep):
+    llm = FlakyLLM(failures=1)
+    answer = await synthesize_with_retry(QUESTION, sample_sources, llm=llm, sleep=sleep)
+    assert answer.answer == llm.response
+    assert len(llm.calls) == 2
+    assert len(sleep.delays) == 1
+
+
+@pytest.mark.asyncio
+async def test_persistent_failure_raises_after_max_attempts(sample_sources, sleep):
+    llm = FlakyLLM(failures=99)
+    with pytest.raises(ProviderError):
+        await synthesize_with_retry(
+            QUESTION, sample_sources, llm=llm, max_attempts=3, sleep=sleep
+        )
+    assert len(llm.calls) == 3
+    # Three attempts means two waits — never a pointless sleep after the last.
+    assert len(sleep.delays) == 2
+
+
+@pytest.mark.asyncio
+async def test_single_attempt_never_sleeps(sample_sources, sleep):
+    llm = FlakyLLM(failures=99)
+    with pytest.raises(ProviderError):
+        await synthesize_with_retry(
+            QUESTION, sample_sources, llm=llm, max_attempts=1, sleep=sleep
+        )
+    assert len(llm.calls) == 1
+    assert sleep.delays == []
+
+
+@pytest.mark.asyncio
+async def test_value_error_from_the_provider_is_not_retried(sample_sources, sleep):
+    # Retrying cannot fix bad input, so it must fail on the first attempt.
+    llm = FlakyLLM(failures=99, exc=ValueError("bad input"))
+    with pytest.raises(ValueError):
+        await synthesize_with_retry(QUESTION, sample_sources, llm=llm, sleep=sleep)
+    assert len(llm.calls) == 1
+    assert sleep.delays == []
+
+
+@pytest.mark.asyncio
+async def test_unexpected_errors_are_not_retried(sample_sources, sleep):
+    llm = FlakyLLM(failures=99, exc=TypeError("bug in our code"))
+    with pytest.raises(TypeError):
+        await synthesize_with_retry(QUESTION, sample_sources, llm=llm, sleep=sleep)
+    assert len(llm.calls) == 1
+
+
+# --- backoff ------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_waits_grow_between_attempts(sample_sources, sleep):
+    llm = FlakyLLM(failures=99)
+    with pytest.raises(ProviderError):
+        await synthesize_with_retry(
+            QUESTION, sample_sources, llm=llm, max_attempts=4, base_delay=1.0, sleep=sleep
+        )
+    assert len(sleep.delays) == 3
+    assert sleep.delays[0] <= sleep.delays[1] <= sleep.delays[2]
+
+
+def test_backoff_stays_within_its_jitter_band():
+    # Equal jitter: between half and all of the nominal exponential delay.
+    for attempt in (1, 2, 3, 4):
+        nominal = 1.0 * 2 ** (attempt - 1)
+        for _ in range(50):
+            wait = _backoff_seconds(attempt, base_delay=1.0)
+            assert nominal / 2 <= wait <= nominal
+
+
+def test_backoff_is_not_always_identical():
+    # Without jitter, simultaneous failures would all retry in the same instant.
+    waits = {_backoff_seconds(2, base_delay=1.0) for _ in range(50)}
+    assert len(waits) > 1
+
+
+# --- validation, before any API call is paid for -------------------------------
+
+
+@pytest.mark.parametrize("bad", ["", "   ", "\n\t "])
+@pytest.mark.asyncio
+async def test_empty_question_rejected_without_calling_the_llm(
+    bad, fake_llm, sample_sources, sleep
+):
+    with pytest.raises(ValueError, match="non-empty"):
+        await synthesize_with_retry(bad, sample_sources, llm=fake_llm, sleep=sleep)
+    assert fake_llm.calls == []
+
+
+@pytest.mark.asyncio
+async def test_oversized_question_rejected_without_calling_the_llm(
+    fake_llm, sample_sources, sleep
+):
+    with pytest.raises(ValueError, match="at most"):
+        await synthesize_with_retry(
+            "x" * (MAX_QUESTION_LENGTH + 1), sample_sources, llm=fake_llm, sleep=sleep
+        )
+    assert fake_llm.calls == []
+
+
+@pytest.mark.asyncio
+async def test_question_at_the_limit_is_accepted(fake_llm, sample_sources, sleep):
+    await synthesize_with_retry(
+        "x" * MAX_QUESTION_LENGTH, sample_sources, llm=fake_llm, sleep=sleep
+    )
+    assert len(fake_llm.calls) == 1
+
+
+@pytest.mark.asyncio
+async def test_empty_sources_rejected_without_calling_the_llm(fake_llm, sleep):
+    with pytest.raises(ValueError, match="sources"):
+        await synthesize_with_retry(QUESTION, [], llm=fake_llm, sleep=sleep)
+    assert fake_llm.calls == []
+
+
+@pytest.mark.asyncio
+async def test_max_attempts_below_one_is_rejected(fake_llm, sample_sources, sleep):
+    with pytest.raises(ValueError, match="max_attempts"):
+        await synthesize_with_retry(
+            QUESTION, sample_sources, llm=fake_llm, max_attempts=0, sleep=sleep
+        )
+    assert fake_llm.calls == []
+
+
+# --- the point of the whole module --------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_blocking_llm_does_not_freeze_the_event_loop(sample_sources, sleep):
+    """`ai.synthesize` blocks. Without asyncio.to_thread this would stall everything."""
+
+    class SlowLLM(FakeLLM):
+        def complete(self, prompt, *, json_schema=None, max_tokens=1024):
+            self.calls.append(prompt)
+            time.sleep(0.20)
+            return self.response
+
+    ticks = 0
+
+    async def ticker() -> None:
+        nonlocal ticks
+        while True:
+            await asyncio.sleep(0.01)
+            ticks += 1
+
+    task = asyncio.create_task(ticker())
+    await synthesize_with_retry(QUESTION, sample_sources, llm=SlowLLM(), sleep=sleep)
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+
+    # A frozen loop would leave this at 0.
+    assert ticks >= 5
