@@ -17,7 +17,7 @@ class Settings(BaseSettings):
         description="Model name for the selected LLM provider",
     )
     web_search_provider: str = Field(
-        default="duckduckgo",
+        default="tavily",
         description="Web search provider: 'tavily', 'serper', or 'duckduckgo'",
     )
 
