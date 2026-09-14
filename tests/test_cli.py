@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import sys
 from types import SimpleNamespace
 
 import pytest
@@ -231,8 +232,11 @@ async def test_question_too_long_is_rejected_before_any_work(capsys):
 # --- the entry point -----------------------------------------------------------
 
 
-def test_missing_orchestrator_reports_a_sentence_not_a_traceback(capsys):
-    # Until the concurrency layer exists, the command must fail politely.
+def test_missing_orchestrator_reports_a_sentence_not_a_traceback(monkeypatch, capsys):
+    # Simulate the concurrency layer being unavailable. A None entry in
+    # sys.modules makes the import fail, so main() stops before building a
+    # client or reaching any network — this test must never call a real API.
+    monkeypatch.setitem(sys.modules, "src.concurrency.orchestrator", None)
     assert main(["ask", QUESTION]) == 1
     assert "concurrent fetching layer is not available" in capsys.readouterr().err
 
