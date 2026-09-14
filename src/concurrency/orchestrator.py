@@ -16,6 +16,9 @@ from ai.providers.base import ProviderError
 from ai.schemas import Source
 from ai.sources import fetch_arxiv, fetch_web, fetch_wikipedia
 
+# Import fetch_with_retry from the ai_service module
+from src.services.ai_service import fetch_with_retry
+
 logger = logging.getLogger(__name__)
 
 # Map normalized full names to the uneditable ai.sources functions
@@ -75,9 +78,9 @@ class ConcurrentOrchestrator:
 
         async with self._semaphore:
             try:
-                # Handle both async coroutines and sync functions cleanly
+                # Wrap async fetchers in fetch_with_retry
                 if inspect.iscoroutinefunction(fetcher):
-                    coro = fetcher(question, client=self._client)
+                    coro = fetch_with_retry(fetcher, question, client=self._client)
                 else:
                     coro = asyncio.to_thread(fetcher, question, client=self._client)
 
