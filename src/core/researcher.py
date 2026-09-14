@@ -1,6 +1,6 @@
 """Business logic: turn a research question into an answer with citations.
 
-Coordinates the three collaborators without doing any of their jobs itself —
+Coordinates the three collaborators without doing any of their jobs itself -
 the cache stores, the orchestrator fetches, the AI service synthesises. All
 three arrive through the constructor, so this class can be tested with fakes
 and never touches the network.
@@ -17,6 +17,7 @@ from ai.providers.base import LLMProvider
 from ai.schemas import Source
 from src.models import CitationModel, ResearchRequest, ResearchResponse
 from src.services.ai_service import DEFAULT_MAX_ATTEMPTS, synthesize_with_retry
+from src.services.cache import CacheService
 from src.storage.cache_store import CacheStore
 
 logger = logging.getLogger(__name__)
@@ -47,7 +48,7 @@ class AsyncResearchAssistant:
         llm: LLMProvider | None = None,
     ) -> None:
         self._orchestrator = orchestrator
-        self._cache = cache
+        self._cache = CacheService(cache)
         self._max_attempts = max_attempts
         self._llm = llm
 
@@ -63,10 +64,11 @@ class AsyncResearchAssistant:
         """
         started = time.perf_counter()
         question = request.question
+
         # dict.fromkeys de-duplicates while preserving the requested order.
         requested = list(dict.fromkeys(request.sources_filter))
 
-        cached = await self._read_cache(requested, question)
+        cached = await self._cache.get_cached_sources(question, requested)
         misses = [source for source in requested if source not in cached]
 
         fetched, degraded = await self._fetch(question, misses)
@@ -119,15 +121,6 @@ class AsyncResearchAssistant:
             degraded_sources=degraded,
         )
 
-    async def _read_cache(
-        self, sources: list[str], question: str
-    ) -> dict[str, list[Source]]:
-        """Look every source up at once; the cache never raises, so no guard."""
-        hits = await asyncio.gather(
-            *(self._cache.get(source, question) for source in sources)
-        )
-        return {source: hit for source, hit in zip(sources, hits) if hit}
-
     async def _fetch(
         self, question: str, sources: list[str]
     ) -> tuple[dict[str, list[Source]], list[str]]:
@@ -139,6 +132,7 @@ class AsyncResearchAssistant:
 
         fetched: dict[str, list[Source]] = {}
         degraded: list[str] = []
+
         for source in sources:
             outcome = results.get(source)
             if isinstance(outcome, Exception):
@@ -152,10 +146,6 @@ class AsyncResearchAssistant:
                 fetched[source] = outcome
 
         if fetched:
-            await asyncio.gather(
-                *(
-                    self._cache.set(source, question, results_for)
-                    for source, results_for in fetched.items()
-                )
-            )
+            await self._cache.save_fetched_sources(question, fetched)
+
         return fetched, degraded
