@@ -230,9 +230,12 @@ async def test_question_too_long_is_rejected_before_any_work(capsys):
 
 # --- the entry point -----------------------------------------------------------
 
+def test_missing_orchestrator_reports_a_sentence_not_a_traceback(monkeypatch, capsys):
+    import sys
 
-def test_missing_orchestrator_reports_a_sentence_not_a_traceback(capsys):
-    # Until the concurrency layer exists, the command must fail politely.
+    # Simulate the orchestrator module being missing to test graceful degradation
+    monkeypatch.setitem(sys.modules, "src.concurrency.orchestrator", None)
+
     assert main(["ask", QUESTION]) == 1
     assert "concurrent fetching layer is not available" in capsys.readouterr().err
 
