@@ -32,9 +32,6 @@ SOURCE_ALIASES = {
 }
 DEFAULT_SOURCES = ["wikipedia", "arxiv", "web"]
 
-# Wikipedia rejects generic agents, so identify the project honestly.
-USER_AGENT = "async-research-assistant/1.0 (university project; httpx)"
-
 EXIT_OK = 0
 EXIT_FAILURE = 1
 EXIT_INTERRUPTED = 130
@@ -154,17 +151,13 @@ def _build_orchestrator(client: Any, settings: Any) -> Any:
 
 
 async def _ask(args: argparse.Namespace, settings: Any) -> int:
-    import httpx
-
     from src.core.researcher import AsyncResearchAssistant
+    from src.services.http_client import create_shared_client
 
-    # One client for every fetch in the request: connection reuse, and a single
-    # place to set the redirect and User-Agent behaviour the sources need.
-    async with httpx.AsyncClient(
-        timeout=settings.per_source_timeout_seconds,
-        follow_redirects=True,
-        headers={"User-Agent": USER_AGENT},
-    ) as client:
+    # One client for every fetch in the request, built by the HTTP layer that
+    # owns its settings. Created here because the composition root owns the
+    # lifetime: leaving this block closes the connection pool.
+    async with create_shared_client(settings.per_source_timeout_seconds) as client:
         assistant = AsyncResearchAssistant(
             _build_orchestrator(client, settings),
             build_cache(settings, use_cache=not args.no_cache),
