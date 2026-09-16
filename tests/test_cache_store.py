@@ -1,8 +1,9 @@
-"""Tests for the TTL cache. No network, no mocking — a temp dir and a fake clock."""
+"""Tests for the TTL cache. No network — a temp dir and a fake clock."""
 
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import pytest
 
@@ -240,13 +241,18 @@ async def test_null_store_writes_nothing_to_disk(tmp_path, wiki_sources):
 
 
 @pytest.mark.asyncio
-async def test_unwritable_cache_dir_degrades_instead_of_raising(tmp_path, clock, wiki_sources):
-    readonly = tmp_path / "readonly"
-    readonly.mkdir()
-    readonly.chmod(0o500)
-    try:
-        store = JsonFileCacheStore(readonly / "cache", ttl_seconds=3600, time_fn=clock)
-        await store.set("wikipedia", "q", wiki_sources)
-        assert await store.get("wikipedia", "q") is None
-    finally:
-        readonly.chmod(0o700)
+async def test_unwritable_cache_dir_degrades_instead_of_raising(
+    tmp_path, clock, wiki_sources, monkeypatch
+):
+    # Simulated rather than chmod-ed: Windows ignores directory permission bits
+    # and root bypasses them, so a real read-only folder is still writable there.
+    def refuse(*args, **kwargs):
+        raise PermissionError("Permission denied")
+
+    store = JsonFileCacheStore(tmp_path / "cache", ttl_seconds=3600, time_fn=clock)
+    monkeypatch.setattr(Path, "mkdir", refuse)
+    await store.set("wikipedia", "q", wiki_sources)
+    monkeypatch.undo()
+
+    assert await store.get("wikipedia", "q") is None
+    assert not (tmp_path / "cache").exists()
