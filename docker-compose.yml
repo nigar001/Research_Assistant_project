@@ -1,0 +1,10 @@
+services:
+  research-pipeline:
+    build: .
+    env_file:
+      - .env
+    volumes:
+      # Mounts your local cache directory so results persist on your Windows host
+      - ./cache:/app/cache
+    # Default behavior: run pytest. Override with CLI queries when needed.
+    command: pytest
