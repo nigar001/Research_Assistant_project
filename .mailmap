@@ -1,0 +1,6 @@
+# Maps alternate git identities to one author, so `git shortlog -sn`,
+# `git log` and `git blame` report a person once rather than per email.
+# Format:  Canonical Name <canonical@email>  <other@email>
+
+faridqul <faridlvrl@gmail.com> <faridqul222@gmail.com>
+faridqul <faridlvrl@gmail.com>

@@ -6,6 +6,13 @@
 **Final tag:** `v1.0-final`
 **Submission date:** _[YYYY-MM-DD]_
 
+> **Note on git authorship — Member B.** `git shortlog -sn` lists Member B under two names,
+> `faridqul <faridlvrl@gmail.com>` and `yaponski <faridqul222@gmail.com>`. These are the same
+> person: commits made through GitHub carry the first identity, commits made from the local
+> machine carried the second before it was corrected. The two together are Member B's 14
+> commits. The repository's `.mailmap` maps them to one author, so `git shortlog -sn` reports
+> the combined total.
+
 ---
 
 ## How to fill this in
@@ -43,26 +50,28 @@ If one member contributed less than 10% without a documented reason (illness, em
 
 ---
 
-## Member B — _[Farid Dilaverli]_ (`@faridqul`)
+## Member B — Farid Dilaverli (`@faridqul`)
 
 **Owned:**
 
-- `src/storage/cache_store.py` (TTL cache: `CacheStore` ABC, JSON backend, `NullCacheStore`)
-- `src/services/ai_service.py` (retries, backoff, logging around `ai.synthesize`)
-- `src/cli.py` and `researcher/` (the `ask` command and its entry point)
-- `tests/test_cache_store.py`, `tests/test_ai_service.py`, `tests/test_cli.py`
+- `src/storage/cache_store.py` — TTL cache: `CacheStore` abstract base class,
+  `JsonFileCacheStore` (canonicalised `(source, query)` keys, SHA-256 filenames, atomic
+  writes, lazy expiry), and `NullCacheStore`, which implements `--no-cache`
+- `src/services/ai_service.py` — retries with exponential backoff and jitter for both
+  `ai.synthesize` and every `ai.fetch_*` call, through one shared retry loop; input
+  validation and logging. Runs synthesis on a worker thread so the event loop is never
+  blocked
+- `src/core/researcher.py` — `AsyncResearchAssistant.ask()`: cache-aside flow, graceful
+  degradation when a source fails, timing, response assembly
+- `src/cli.py` and `researcher/` — the `ask` command, `--sources`, `--no-cache`, reference
+  rendering, exit codes, `load_dotenv()`, logging setup
+- `tests/test_cache_store.py` (29), `tests/test_ai_service.py` (41),
+  `tests/test_researcher.py` (18), `tests/test_cli.py` (26) — 114 of the repository's 139
+  tests, all offline
 - `requirements.txt`
-- PRs: #1 (merged), #_[list]_
+- PRs: #1, #2, #3, #4, #5, #6, #7, #8, #9, #10
 
-**Co-owned:**
-
-- `.gitignore`, `AI.instructions.md` (shared project docs)
-
-**Reviewed:**
-
-- PRs: #_[list]_
-
-**Approximate share of commits:** _[33]_%
+**Approximate share of commits:** 41%
 
 ---
 
