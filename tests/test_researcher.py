@@ -135,6 +135,22 @@ async def test_null_cache_refetches_every_time(orchestrator, fake_llm):
 
 
 @pytest.mark.asyncio
+async def test_bypass_cache_refetches_even_when_the_entry_exists(assistant, orchestrator):
+    await assistant.ask(request_for())
+    await assistant.ask(request_for(bypass=True))
+    # Without the bypass the second call would have been served from the cache.
+    assert len(orchestrator.calls) == 2
+
+
+@pytest.mark.asyncio
+async def test_bypass_cache_still_refreshes_the_entry(assistant, orchestrator, cache):
+    await assistant.ask(request_for(bypass=True))
+    # The read was skipped, but the write was not: the next normal call hits.
+    await assistant.ask(request_for())
+    assert len(orchestrator.calls) == 1
+
+
+@pytest.mark.asyncio
 async def test_a_differently_spelled_question_hits_the_same_cache(assistant, orchestrator):
     await assistant.ask(request_for(question="What is photosynthesis?"))
     await assistant.ask(request_for(question="WHAT IS PHOTOSYNTHESIS"))
