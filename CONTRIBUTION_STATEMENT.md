@@ -4,7 +4,7 @@
 **Topic:** _[Topic 4 — Research Assistant]_  
 **Repository:** _[https://github.com/nigar001/Research_Assistant_project](https://github.com/nigar001/Research_Assistant_project)_  
 **Final tag:** `v1.0-final`  
-**Submission date:** _[2026-09-19]_
+**Submission date:** 2026-09-19
 
 > **Note on git authorship — Member B.** `git shortlog -sn` lists Member B under two names,
 > `faridqul <faridlvrl@gmail.com>` and `yaponski <faridqul222@gmail.com>`. These are the same
@@ -27,7 +27,7 @@
 - `docker-compose.yml`
 - `benchmark.py`
 - `tests/test_orchestrator.py`
-- PRs: _[list]_
+- PRs: none opened; this work landed as direct commits to `main` (see §9 of the report)
 
 **Co-owned (paired or substantially edited):**
 
@@ -36,9 +36,9 @@
 
 **Reviewed (PRs reviewed and merged):**
 
-- PRs: _[6,7,8,9,10,11]_
+- PRs: #6, #7, #8, #9, #10, #11, #12
 
-**Approximate share of commits:** 37%
+**Approximate share of commits:** 43%
 
 ---
 
@@ -61,9 +61,9 @@
   `tests/test_researcher.py` (20), `tests/test_cli.py` (26) — 116 of the repository's 141
   tests, all offline
 - `requirements.txt`
-- PRs: #1, #2, #3, #4, #5, #6, #7, #8, #9, #10, #11, #12, #13
+- PRs: #1, #2, #3, #4, #5, #6, #7, #8, #9, #10, #11, #12, #13, #14
 
-**Approximate share of commits:** 41%
+**Approximate share of commits:** 39%
 
 ---
 
@@ -76,7 +76,7 @@
 - `respx` offline test suite
 - `README.md`
 - `.env.example`
-- PRs: _[list]_
+- PRs: none opened; this work landed as direct commits to `main` (see §9 of the report)
 
 **Co-owned:**
 
@@ -84,9 +84,9 @@
 
 **Reviewed:**
 
-- PRs: _[list]_
+- PRs: none
 
-**Approximate share of commits:** 16%
+**Approximate share of commits:** 18%
 
 ---
 
@@ -96,7 +96,7 @@
 | :--------------------------- | :-------------- | :-------------------------------------------------------------------------------------------------------------------- |
 | `benchmark.py`               | Gemini          | Generated initial benchmark runner; added 429 rate-limit backoff handling and inter-query delays.                     |
 | `src/services/ai_service.py` | Cursor / Claude | Drafted initial exponential backoff logic for synthesis retries; team refined exception handling for provider errors. |
-| `tests/`                     | Claude          | Suggested unit test cases and mock structures for offline execution; team reviewed and expanded to 110 passing tests. |
+| `tests/`                     | Claude          | Suggested unit test cases and mock structures for offline execution; team reviewed and expanded to 141 passing tests. |
 
 We affirm that we **can defend every line of code** in this repository during the oral defense. "The AI wrote it" is not an answer we will use.
 

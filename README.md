@@ -1,4 +1,4 @@
-# Reasearch_Assistant_project
+# Research Assistant — Topic 4
 
 ## Overview
 The Async Research Assistant is a command-line tool that answers user questions by querying Wikipedia, arXiv, and web-search APIs in parallel. It retrieves relevant excerpts from these sources and uses a Large Language Model (LLM) to synthesize a single, concise answer with inline bracketed citations.
@@ -48,7 +48,7 @@ This tool is built with a clear separation of concerns, isolating the core AI pr
    # --- LLM (for synthesis) ---
    LLM_PROVIDER=gemini         # anthropic | openai | gemini
    LLM_MODEL=gemini-2.5-flash
-   GOOGLE_API_KEY=your_api_key_here
+   GEMINI_API_KEY=your_api_key_here
 
    # --- Web search provider ---
    WEB_SEARCH_PROVIDER=tavily  # tavily | serper | duckduckgo
@@ -84,20 +84,39 @@ python -m researcher ask "Current state of fusion energy?" --no-cache
 ```
 
 ## Example Output
+
+A real run. Wikipedia currently returns nothing for question-shaped queries (see
+*Known limitations*), so the answer is produced from the remaining sources and the
+missing one is named rather than silently dropped:
+
 ```text
+$ python -m researcher ask "What is photosynthesis and what are its main stages?"
+
 Q: What is photosynthesis and what are its main stages?
 
-A: Photosynthesis is the process by which plants convert light energy into chemical energy [1]. The reaction takes place in the chloroplasts and produces oxygen as a byproduct [2].
+A: Photosynthesis is a vital process that plants, algae, and some bacteria use to
+   convert light energy into chemical energy. It consists of two main stages: the
+   light-dependent reactions and the light-independent reactions (Calvin cycle). In
+   the light-dependent reactions, which occur in the thylakoid membranes, sunlight
+   energy is used to produce ATP and NADPH while releasing oxygen as a byproduct.
+   The light-independent reactions then utilize ATP, NADPH, and carbon dioxide to
+   synthesize sugars [4,5,6].
 
 References:
-  [1] (wikipedia) Photosynthesis
+  [4] (web) Breaking down photosynthesis stages (video)
+      https://www.khanacademy.org/science/ap-biology/...
+  [5] (web) Photosynthesis
+      https://education.nationalgeographic.org/resource/photosynthesis
+  [6] (web) Photosynthesis
       https://en.wikipedia.org/wiki/Photosynthesis
-  [2] (arxiv) Light-Dependent Reactions of Photosynthesis
-      https://arxiv.org/abs/1706.03762
 
-Note: web unavailable - answered from the remaining sources.
-Completed in 2.45s.
+Note: wikipedia unavailable — answered from the remaining sources.
+Completed in 4.95s.
 ```
+
+Citation numbers follow each excerpt's position in the collected list, and the
+synthesizer drops the indices it did not use rather than renumbering — which is why
+the first reference here is `[4]`.
 
 ## Testing & Benchmarking
 
@@ -111,8 +130,55 @@ Completed in 2.45s.
   python benchmark.py --with-llm  # Includes end-to-end synthesis
   ```
 
+### Results: sequential vs concurrent fetching
+
+Measured 18 September 2026 on Linux / Python 3.12.3, over all five questions in
+`data/research_questions.json`, three timed runs each. Both paths use the same shared
+client, the same per-source timeout and the same retry wrapper, so only the scheduling
+differs; the cache is not involved, because a cache hit would mean no fetch happened.
+
+| Question | Sequential (s) | Concurrent (s) | Speed-up |
+| :--- | ---: | ---: | ---: |
+| What is photosynthesis and what are its main stages? | 3.11 | 2.15 | 1.45x |
+| How do transformer-based language models handle long context windows? | 3.11 | 1.16 | 2.68x |
+| What were the main causes of the 2008 financial crisis? | 2.39 | 1.47 | 1.62x |
+| What is the current state of fusion energy research? | 2.12 | 1.64 | 1.29x |
+| How does CRISPR-Cas9 gene editing work at a molecular level? | 2.87 | 2.43 | 1.18x |
+| **Mean** | **2.72** | **1.77** | **1.54x** |
+
+End to end, including synthesis, the mean is **6.25 s** — of which concurrent fetching is
+about 1.9 s. The remaining ~4.3 s is the single LLM call, which is one request for one
+question and cannot be parallelised. Concurrency converts the *sum* of the three fetches
+into their *maximum*, so the gain depends on how uneven the sources are: 2.68x where one
+source dominated, 1.18x where all three were already similar.
+
+Full method and interpretation: [`REPORT.md`](REPORT.md) §5.
+
 ## Docker Support
-The project includes a `Dockerfile` that builds the application and defaults to running the `pytest` test suite. A `docker-compose.yml` is also provided to mount the local cache directory so results persist on your host.
+
+The image runs the application end to end. The test suite runs by overriding the
+entrypoint.
+
 ```bash
-docker-compose up --build
+# build and run a real query (needs .env with your keys)
+docker compose up --build
+
+# run the offline test suite instead
+docker compose run --rm --entrypoint pytest research-pipeline
 ```
+
+`.dockerignore` excludes `.env`, which matters: the Dockerfile uses `COPY . .`, so without
+it real API keys would be baked into an image layer. `docker-compose.yml` mounts `./.cache`
+so cached results persist between runs.
+
+## Known limitations
+
+- **Wikipedia returns nothing for question-shaped queries.** `ai/sources.py` uses the
+  `action=opensearch` endpoint, which matches the *start of an article title*:
+  `"Photosynthesis"` returns results, `"What is photosynthesis?"` returns none. The API
+  answers HTTP 200 with an empty list, so this is not rate limiting. The fix is Wikipedia's
+  full-text `list=search` endpoint, which lives inside `ai/` and cannot be edited under the
+  project contract. Graceful degradation reports the source as unavailable and the answer is
+  produced from arXiv and web search.
+- **No timeout on synthesis.** Each fetch has a per-source deadline; the LLM call does not.
+- Further limitations are catalogued in [`REPORT.md`](REPORT.md) §8.
