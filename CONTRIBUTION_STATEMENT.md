@@ -1,10 +1,10 @@
 # Contribution Statement
 
-**Team:** _Researches_
-**Topic:** _[Topic 4 — Research Assistant]_
-**Repository:** _[https://github.com/nigar001/Research_Assistant_project](https://github.com/nigar001/Research_Assistant_project)_
-**Final tag:** `v1.0-final`
-**Submission date:** _[YYYY-MM-DD]_
+**Team:** _Researchers_  
+**Topic:** _[Topic 4 — Research Assistant]_  
+**Repository:** _[https://github.com/nigar001/Research_Assistant_project](https://github.com/nigar001/Research_Assistant_project)_  
+**Final tag:** `v1.0-final`  
+**Submission date:** _[2026-09-19]_
 
 > **Note on git authorship — Member B.** `git shortlog -sn` lists Member B under two names,
 > `faridqul <faridlvrl@gmail.com>` and `yaponski <faridqul222@gmail.com>`. These are the same
@@ -15,38 +15,30 @@
 
 ---
 
-## How to fill this in
-
-This is the single piece of evidence we use to assess **individual contribution** within the team. Rules:
-
-1. Every member writes their own three subsections (Owned, Co-owned, Reviewed).
-2. **Be specific.** "Worked on the backend" is not acceptable; "implemented `src/services/ai_service.py` and `src/concurrency/pipeline.py`, owned PRs #4, #7, #11" is.
-3. The committed-percentages must add to 100% and approximately match `git shortlog -sn` on the `main` branch.
-4. All three members must sign at the bottom. Unsigned submissions are returned ungraded.
-
-If one member contributed less than 10% without a documented reason (illness, emergency), the team loses 5 points automatically per the rubric.
-
----
-
-## Member A — _[Nigar Alimammadov]_ (`@nigar001`)
+## Member A — Nigar Alimammadova (`@nigar001`)
 
 **Owned (sole author of these files / PRs):**
 
 - `src/config.py`
 - `src/models.py`
 - `src/concurrency/orchestrator.py`
-- `src/core/researcher.py`
-- PRs: #_[list]_
+- `Dockerfile`
+- `.dockerignore`
+- `docker-compose.yml`
+- `benchmark.py`
+- `tests/test_orchestrator.py`
+- PRs: _[list]_
 
 **Co-owned (paired or substantially edited):**
 
-- _[list]_
+- `src/cli.py`
+- `.gitignore`
 
 **Reviewed (PRs reviewed and merged):**
 
-- PRs: #_[list]_
+- PRs: _[6,7,8,9,10,11]_
 
-**Approximate share of commits:** _[34]_%
+**Approximate share of commits:** 37%
 
 ---
 
@@ -54,6 +46,7 @@ If one member contributed less than 10% without a documented reason (illness, em
 
 **Owned:**
 
+<<<<<<< HEAD
 - `src/storage/cache_store.py` — TTL cache: `CacheStore` abstract base class,
   `JsonFileCacheStore` (canonicalised `(source, query)` keys, SHA-256 filenames, atomic
   writes, lazy expiry), and `NullCacheStore`, which implements `--no-cache`
@@ -72,39 +65,59 @@ If one member contributed less than 10% without a documented reason (illness, em
 - PRs: #1, #2, #3, #4, #5, #6, #7, #8, #9, #10
 
 **Approximate share of commits:** 41%
-
----
-
-## Member C — _[Sahib Aliyev]_ (`@github-handle`)
-
-_Slice: shared `httpx.AsyncClient`, per-source `asyncio.timeout()` wrappers, retry/backoff
-on the fetchers, the `respx` offline test suite, the Dockerfile._
-
-**Owned:**
-
-- _[list]_
+=======
+- `src/storage/cache_store.py` (TTL cache: `CacheStore` ABC, JSON backend, `NullCacheStore`)
+- `src/services/ai_service.py` (retries, backoff, logging around `ai.synthesize`)
+- `src/core/researcher.py` (core workflow execution)
+- `src/cli.py` and `researcher/` (`__init__.py`, `__main__.py`, input validation, logging)
+- `tests/test_cache_store.py`, `tests/test_ai_service.py`, `tests/test_researcher.py`, `tests/test_cli.py`
+- `requirements.txt`
+- PRs: #1, #3, #6, #7, #8, #9, #10
 
 **Co-owned:**
 
-- _[list]_
+- `.gitignore`
+- `AI.instructions.md`
 
 **Reviewed:**
 
-- _[list]_
+- PRs: _[list]_
 
-**Approximate share of commits:** _[33]_%
+**Approximate share of commits:** 45%
+>>>>>>> 963e461 (Add contribution statement file)
+
+---
+
+## Member C — Sahib Aliyev (`@SahibAliyev5`)
+
+**Owned:**
+
+- `src/services/cache.py`
+- Shared `httpx.AsyncClient` setup (with `follow_redirects` & custom `User-Agent`)
+- `respx` offline test suite
+- `README.md`
+- `.env.example`
+- PRs: _[list]_
+
+**Co-owned:**
+
+- `src/cli.py` (HTTP client integration)
+
+**Reviewed:**
+
+- PRs: _[list]_
+
+**Approximate share of commits:** 16%
 
 ---
 
 ## AI tool disclosure (also in §10 of the report)
 
-We used AI coding assistants as follows. Each item lists the module, the assistant, and what the team did with the output.
-
-| Module / file                     | Assistant  | What we did with it                                                                                                            |
-| --------------------------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| _[e.g. `src/services/retry.py`]_  | _[Cursor]_ | _[Drafted initial backoff logic; team rewrote the jitter and retry-on-429 branch after observing rate-limit behavior in dev.]_ |
-| _[e.g. `tests/test_pipeline.py`]_ | _[Claude]_ | _[Suggested test cases; team reviewed each, kept 4 of 6, hand-wrote 2 more.]_                                                  |
-| _[...]_                           | _[...]_    | _[...]_                                                                                                                        |
+| Module / file                | Assistant       | What we did with it                                                                                                   |
+| :--------------------------- | :-------------- | :-------------------------------------------------------------------------------------------------------------------- |
+| `benchmark.py`               | Gemini          | Generated initial benchmark runner; added 429 rate-limit backoff handling and inter-query delays.                     |
+| `src/services/ai_service.py` | Cursor / Claude | Drafted initial exponential backoff logic for synthesis retries; team refined exception handling for provider errors. |
+| `tests/`                     | Claude          | Suggested unit test cases and mock structures for offline execution; team reviewed and expanded to 110 passing tests. |
 
 We affirm that we **can defend every line of code** in this repository during the oral defense. "The AI wrote it" is not an answer we will use.
 
@@ -119,8 +132,8 @@ By signing below, we affirm that:
 - Every line of code in the repository can be defended by at least one team member.
 - AI assistant usage has been disclosed as described above.
 
-| Member          | Signature                                    | Date             |
-| --------------- | -------------------------------------------- | ---------------- |
-| _[Full Name A]_ | \***\*\*\*\*\*\*\***\_\_\***\*\*\*\*\*\*\*** | \***\*\_\_\*\*** |
-| _[Full Name B]_ | \***\*\*\*\*\*\*\***\_\_\***\*\*\*\*\*\*\*** | \***\*\_\_\*\*** |
-| _[Full Name C]_ | \***\*\*\*\*\*\*\***\_\_\***\*\*\*\*\*\*\*** | \***\*\_\_\*\*** |
+| Member             | Signature       | Date       |
+| :----------------- | :-------------- | :--------- |
+| Nigar Alimammadova | `@nigar001`     | 2026-09-18 |
+| Farid Dilaverli    | `@faidqul`      | 2026-09-18 |
+| Sahib Aliyev       | `@SahibAliyev5` | 2026-09-18 |
