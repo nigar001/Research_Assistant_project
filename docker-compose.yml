@@ -4,7 +4,8 @@ services:
     env_file:
       - .env
     volumes:
-      # Mounts your local cache directory so results persist on your Windows host
-      - ./cache:/app/cache
-    # Default behavior: run pytest. Override with CLI queries when needed.
-    command: pytest
+      # The app writes to CACHE_DIR, which defaults to .cache — the mount must match.
+      - ./.cache:/app/.cache
+    # Runs the application end to end. To run the test suite instead:
+    #   docker compose run --rm --entrypoint pytest research-pipeline
+    command: ["ask", "What is photosynthesis and what are its main stages?"]

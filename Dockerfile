@@ -9,8 +9,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application files
 COPY . .
 
-# Ensure the cache directory exists
-RUN mkdir -p /app/cache
+# Ensure the cache directory exists (matches CACHE_DIR, default .cache)
+RUN mkdir -p /app/.cache
 
-# Default command to run tests
-CMD ["pytest"]
+# The image runs the application. TOPIC.md asks for a container that works
+# end to end, so the default is a real query; tests run by overriding the
+# entrypoint:  docker run --rm --entrypoint pytest <image>
+ENTRYPOINT ["python", "-m", "researcher"]
+CMD ["ask", "What is photosynthesis and what are its main stages?"]

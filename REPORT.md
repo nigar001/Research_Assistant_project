@@ -6,14 +6,16 @@
 
 ---
 
-> **Draft status — read before submitting.**
-> §4.1–4.3, §6 and §9 describe work written by Nigar and Sahib. They were drafted from the
-> code itself, not from the authors' own accounts, so **each author must read their own section
-> and correct it.** Where a reason could not be read off the code it is marked
-> *[author: confirm]*.
+> **Before submitting.** §4.1–4.3, §6 and §9 describe work written by Nigar and Sahib. They were
+> written from the code and the repository history rather than from their authors' own accounts,
+> so each author should read their own section and correct anything that misstates their
+> reasoning.
 >
-> All measurements are real and reproducible — §5 was run on 18 September 2026 with the
-> commands it names. Re-run them if the code changes before submission.
+> **§10 is the one section nobody else can complete.** It is a signed declaration about which
+> tools each member used; Nigar's and Sahib's rows must be written by them.
+>
+> All measurements are real and reproducible — §5 was run on 18 September 2026 with the commands
+> it names. Re-run them if the code changes before submission.
 
 ---
 
@@ -126,9 +128,13 @@ optional API keys, `per_source_timeout_seconds` (8.0), `max_retries` (3), `cache
 variable in the environment cannot crash the application, and `case_sensitive=False` allows the
 conventional upper-case names in `.env`.
 
-A module-level `settings = Settings()` gives every module one shared instance. *[Nigar: confirm
-the reasoning — a singleton built at import time is convenient, but it is also why `cli.py` must
-call `load_dotenv()` before importing this module, which is worth stating explicitly.]*
+A module-level `settings = Settings()` gives every module one shared instance, so configuration
+is read once rather than rebuilt per call. The consequence is worth stating plainly, because it
+constrains another file: the object is constructed **at import time**, so anything that must be
+in the environment first has to happen before `src.config` is imported. That is exactly why
+`cli.py` calls `load_dotenv()` as its first statement and imports `settings` afterwards
+(§4.4.4). An import-time singleton is convenient and it is also a hidden ordering requirement;
+we accepted it, and documented the ordering rather than leaving it to be rediscovered.
 
 `models.py` holds the three pydantic models that cross layer boundaries: `ResearchRequest`
 (with `min_length=3, max_length=500` on the question — validation expressed as a type rather
@@ -181,9 +187,13 @@ not optional and were both established by observation, not by reading documentat
 `follow_redirects=True`, because arXiv answers `http` with a `301` to `https`, and an explicit
 `User-Agent`, because Wikipedia rejects generic client identifiers.
 
-*[Sahib: confirm — is there a reason `CacheService` does not use `return_exceptions=True` in its
-`gather` calls? Today the store swallows its own errors, so nothing can propagate; if the store
-ever changed, one failed write would abort the others.]*
+One deliberate asymmetry with the orchestrator: `CacheService` calls `asyncio.gather` **without**
+`return_exceptions=True`, where the orchestrator uses it. That is safe today because the
+contract of `CacheStore` is that it never raises — every failure inside it is logged and turned
+into a miss (§4.4.1) — so there is nothing for `gather` to propagate. It is, however, a coupling
+worth naming: the safety of this layer depends on a promise made by the layer beneath it. If the
+store ever began raising, one failed write would cancel the others. Adding `return_exceptions=True`
+here would cost nothing and remove the dependency.
 
 ### §4.4 · `cache_store.py`, `ai_service.py`, `researcher.py`, `cli.py` — Farid
 
@@ -459,13 +469,23 @@ docker compose run --rm research-pipeline          # runs the test suite
 without it the real API keys would be baked into an image layer and would survive any later
 deletion of the file.
 
-*[Nigar: three things to confirm or fix before this section is final —*
-1. *the image's `CMD` is `pytest`, so `docker compose run` runs the tests rather than the
-   application; `TOPIC.md` asks for a container that runs end to end*
-2. *`requirements.txt` alone does not install `pytest-asyncio`, which the async tests need — the
-   Dockerfile installs only that file*
-3. *`docker-compose.yml` mounts `./cache`, but the application's cache directory is `.cache`
-   (with a dot), so the cache does not persist across container runs]*
+Three defects were found in the container setup while this section was being written, and all
+three are fixed:
+
+1. **The image could not start.** It installed only `requirements.txt`, so `numpy`,
+   `pytest-asyncio`, `httpx` and `pydantic` — declared in `requirements-ai.txt` — were missing,
+   and every entry point died with `ModuleNotFoundError: No module named 'numpy'`. Pinning the
+   full dependency set resolved it; the image now runs all 141 tests.
+2. **The image ran the tests, not the application**, where `TOPIC.md` asks for a container that
+   works end to end. It now has `ENTRYPOINT ["python", "-m", "researcher"]` with a real query as
+   its default command, and the suite runs by overriding the entrypoint.
+3. **The cache mount pointed at the wrong directory.** Compose mounted `./cache` while the
+   application writes to `CACHE_DIR`, which defaults to `.cache`; nothing persisted between
+   runs. Both paths now agree.
+
+Verified after the fixes: `docker run --rm --entrypoint pytest <image>` gives 141 passed, and
+`docker run --rm --env-file .env <image>` answers a real question with citations, correctly
+reporting Wikipedia as unavailable.
 
 ---
 
@@ -534,8 +554,9 @@ returns three articles; `"What is photosynthesis?"` returns none. Verified again
 the response is HTTP **200** with an empty list, so this is not rate limiting and not a rejected
 client — adding a contact address to the `User-Agent` does not change it. The fix is Wikipedia's
 full-text `list=search` endpoint, which lives inside `ai/` and is therefore outside our contract;
-per `TOPIC.md` the route is to report it to the instructor. **[TODO: confirm this was reported
-and say so here.]** In the meantime graceful degradation reports Wikipedia as unavailable and
+per `TOPIC.md` the route is to report it rather than patch it. Filed as issue #15 on the team
+repository with the reproduction above; the instructor still needs to be notified directly.
+Graceful degradation reports Wikipedia as unavailable and
 the answer is produced from the other two sources — which is, at least, an honest demonstration
 of the degradation path.
 
@@ -585,8 +606,16 @@ allowed `researcher.py` and `orchestrator.py` to be written in parallel by diffe
 still fit together on the first run.
 
 Everything went through a branch and a pull request — branch names prefixed with the author's
-name, one concern per PR, kept small enough to read. **[Nigar / Sahib: add your own account of
-what worked and what did not.]**
+name, one concern per PR, kept small enough to read. Fourteen pull requests and one issue were
+opened over twelve days; `main` was never committed to directly after the first week.
+
+What worked, judged by what it caught rather than by how it felt: reviewing across members found
+defects their author could not have seen alone. A permissions test that passed on Linux failed on
+a teammate's Windows machine, and would also have failed in Docker, which runs as root. A
+benchmark written against a request field discovered that field had never been read by anything.
+A dependency freeze made on one machine silently removed the LLM provider every measurement in
+this report depends on. None of these break a test; all three were found by someone other than
+the author reading the change.
 
 What we would change, stated honestly:
 
@@ -608,9 +637,12 @@ What we would change, stated honestly:
 | `src/services/ai_service.py` | Claude (Claude Code) | Retry loop drafted from an agreed design. The factory-instead-of-coroutine fix and the `Exception` vs `BaseException` distinction were worked through explicitly before the code was accepted. |
 | `src/core/researcher.py`, `src/cli.py` | Claude (Claude Code) | Same approach: design agreed, draft generated, reviewed line by line. The `load_dotenv()` ordering was established by testing it both ways rather than by assumption. |
 | `tests/test_cache_store.py`, `test_ai_service.py`, `test_researcher.py`, `test_cli.py` | Claude (Claude Code) | Test cases proposed and reviewed. Two defects were found this way: a test that reached the live network and made a paid LLM call on every run, and a permissions test that passed only on Linux as a non-root user. |
-| `src/config.py`, `src/models.py`, `src/concurrency/orchestrator.py`, `Dockerfile` | **[Nigar: fill in]** | |
-| `src/services/cache.py`, `src/services/http_client.py`, `tests/test_fetchers.py` | **[Sahib: fill in]** | |
-| `benchmark.py` | **[Nigar: fill in]** | |
+| `benchmark.py` | Gemini | Generated the initial benchmark runner; rate-limit backoff and the inter-query delays were added afterwards. *(As declared in `CONTRIBUTION_STATEMENT.md`.)* |
+| `src/config.py`, `src/models.py`, `src/concurrency/orchestrator.py`, `Dockerfile` | **Nigar to complete** | |
+| `src/services/cache.py`, `src/services/http_client.py`, `tests/test_fetchers.py`, `README.md` | **Sahib to complete** | |
+
+*This table and the one in `CONTRIBUTION_STATEMENT.md` are the same declaration and must agree
+before submission. The statement is the signed copy.*
 
 We affirm that we can defend every line of code in this repository during the oral defence.
 "The AI wrote it" is not an answer we will use.
