@@ -46,7 +46,6 @@
 
 **Owned:**
 
-<<<<<<< HEAD
 - `src/storage/cache_store.py` — TTL cache: `CacheStore` abstract base class,
   `JsonFileCacheStore` (canonicalised `(source, query)` keys, SHA-256 filenames, atomic
   writes, lazy expiry), and `NullCacheStore`, which implements `--no-cache`
@@ -59,32 +58,12 @@
 - `src/cli.py` and `researcher/` — the `ask` command, `--sources`, `--no-cache`, reference
   rendering, exit codes, `load_dotenv()`, logging setup
 - `tests/test_cache_store.py` (29), `tests/test_ai_service.py` (41),
-  `tests/test_researcher.py` (18), `tests/test_cli.py` (26) — 114 of the repository's 139
+  `tests/test_researcher.py` (20), `tests/test_cli.py` (26) — 116 of the repository's 141
   tests, all offline
 - `requirements.txt`
-- PRs: #1, #2, #3, #4, #5, #6, #7, #8, #9, #10
+- PRs: #1, #2, #3, #4, #5, #6, #7, #8, #9, #10, #11, #12, #13
 
 **Approximate share of commits:** 41%
-=======
-- `src/storage/cache_store.py` (TTL cache: `CacheStore` ABC, JSON backend, `NullCacheStore`)
-- `src/services/ai_service.py` (retries, backoff, logging around `ai.synthesize`)
-- `src/core/researcher.py` (core workflow execution)
-- `src/cli.py` and `researcher/` (`__init__.py`, `__main__.py`, input validation, logging)
-- `tests/test_cache_store.py`, `tests/test_ai_service.py`, `tests/test_researcher.py`, `tests/test_cli.py`
-- `requirements.txt`
-- PRs: #1, #3, #6, #7, #8, #9, #10
-
-**Co-owned:**
-
-- `.gitignore`
-- `AI.instructions.md`
-
-**Reviewed:**
-
-- PRs: _[list]_
-
-**Approximate share of commits:** 45%
->>>>>>> 963e461 (Add contribution statement file)
 
 ---
 
@@ -135,5 +114,5 @@ By signing below, we affirm that:
 | Member             | Signature       | Date       |
 | :----------------- | :-------------- | :--------- |
 | Nigar Alimammadova | `@nigar001`     | 2026-09-18 |
-| Farid Dilaverli    | `@faidqul`      | 2026-09-18 |
+| Farid Dilaverli    | `@faridqul`      | 2026-09-18 |
 | Sahib Aliyev       | `@SahibAliyev5` | 2026-09-18 |
