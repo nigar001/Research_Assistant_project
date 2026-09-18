@@ -67,7 +67,12 @@ class AsyncResearchAssistant:
         # dict.fromkeys de-duplicates while preserving the requested order.
         requested = list(dict.fromkeys(request.sources_filter))
 
-        cached = await self._cache.get_cached_sources(question, requested)
+        # bypass_cache skips the read but not the write, so a bypassing run
+        # still refreshes the entry rather than leaving a stale one behind.
+        if request.bypass_cache:
+            cached: dict[str, list[Source]] = {}
+        else:
+            cached = await self._cache.get_cached_sources(question, requested)
         misses = [source for source in requested if source not in cached]
 
         fetched, degraded = await self._fetch(question, misses)
