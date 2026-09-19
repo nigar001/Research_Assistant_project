@@ -1,23 +1,9 @@
 # Topic 4 — Async Research Assistant
+
 ## Project report
 
 **Team:** Researches · **Repository:** https://github.com/nigar001/Research_Assistant_project
 **Members:** Nigar Alimammadova (`@nigar001`) · Farid Dilaverli (`@faridqul`) · Sahib Aliyev
-
----
-
-> **Before submitting.** §4.1–4.3, §6 and §9 describe work written by Nigar and Sahib. They were
-> written from the code and the repository history rather than from their authors' own accounts,
-> so each author should read their own section and correct anything that misstates their
-> reasoning.
->
-> **§10 is the one section nobody else can complete.** It is a signed declaration about which
-> tools each member used; Nigar's and Sahib's rows must be written by them.
->
-> All measurements are real and reproducible — §5 was run on 18 September 2026 with the commands
-> it names. Re-run them if the code changes before submission.
-
----
 
 ## §1 · Introduction and problem statement
 
@@ -37,8 +23,8 @@ is ours**: the concurrency layer that overlaps the three fetches, a cache so a r
 costs nothing, retries with exponential backoff, configuration, validation, logging, the command
 people type, the container it ships in, and a test suite that never touches the network.
 
-The engineering problem, stated once: *three slow, independently unreliable network calls must
-behave like one fast, reliable one.* Sections §3–§5 are about how, §7 about how we know it
+The engineering problem, stated once: _three slow, independently unreliable network calls must
+behave like one fast, reliable one._ Sections §3–§5 are about how, §7 about how we know it
 works, and §8 about where it still does not.
 
 ---
@@ -47,19 +33,19 @@ works, and §8 about where it still does not.
 
 Every row of the "What you build" table in `TOPIC.md`, and where it is satisfied.
 
-| Requirement | Where it lives | § | Done by |
-|---|---|---|---|
-| `config.py` — typed settings from the environment | `src/config.py` | §4.1 | Nigar |
-| Concurrent orchestration, per-source timeouts, graceful degradation | `src/concurrency/orchestrator.py` | §4.2, §5 | Nigar |
-| Caching keyed by `(source, query)` with TTL; `--no-cache` bypass | `src/storage/cache_store.py`, `src/services/cache.py` | §4.4.1, §4.3 | Farid, Sahib |
-| CLI `python -m researcher ask "…"`, `--sources` | `src/cli.py`, `researcher/` | §4.4.4 | Farid |
-| Citation rendering | `src/cli.py` | §4.4.4 | Farid |
-| Retries with exponential backoff on `ai.*` calls and HTTP fetches | `src/services/ai_service.py` | §4.4.2 | Farid |
-| Validation — reject empty and oversized questions | `src/models.py`, `src/cli.py`, `src/services/ai_service.py` | §4.1, §4.4 | Nigar, Farid |
-| Logging with an env-driven level | `src/cli.py`, module loggers throughout | §4.4.4 | Farid |
-| Tests: ≥60% coverage, fully offline | `tests/` | §7 | all three |
-| Dockerfile that builds and runs | `Dockerfile`, `docker-compose.yml`, `.dockerignore` | §6 | Nigar |
-| README: setup, env, run, test, timings | `README.md` | §6 | Sahib |
+| Requirement                                                         | Where it lives                                              | §            | Done by      |
+| ------------------------------------------------------------------- | ----------------------------------------------------------- | ------------ | ------------ |
+| `config.py` — typed settings from the environment                   | `src/config.py`                                             | §4.1         | Nigar        |
+| Concurrent orchestration, per-source timeouts, graceful degradation | `src/concurrency/orchestrator.py`                           | §4.2, §5     | Nigar        |
+| Caching keyed by `(source, query)` with TTL; `--no-cache` bypass    | `src/storage/cache_store.py`, `src/services/cache.py`       | §4.4.1, §4.3 | Farid, Sahib |
+| CLI `python -m researcher ask "…"`, `--sources`                     | `src/cli.py`, `researcher/`                                 | §4.4.4       | Farid        |
+| Citation rendering                                                  | `src/cli.py`                                                | §4.4.4       | Farid        |
+| Retries with exponential backoff on `ai.*` calls and HTTP fetches   | `src/services/ai_service.py`                                | §4.4.2       | Farid        |
+| Validation — reject empty and oversized questions                   | `src/models.py`, `src/cli.py`, `src/services/ai_service.py` | §4.1, §4.4   | Nigar, Farid |
+| Logging with an env-driven level                                    | `src/cli.py`, module loggers throughout                     | §4.4.4       | Farid        |
+| Tests: ≥60% coverage, fully offline                                 | `tests/`                                                    | §7           | all three    |
+| Dockerfile that builds and runs                                     | `Dockerfile`, `docker-compose.yml`, `.dockerignore`         | §6           | Nigar        |
+| README: setup, env, run, test, timings                              | `README.md`                                                 | §6           | Sahib        |
 
 **Achieved:** 141 tests passing offline in about 2.7 seconds, **96% statement coverage** of
 `src/`, and the 16 supplied smoke tests still passing unmodified.
@@ -90,7 +76,7 @@ Two consequences matter more than the diagram:
 **Objects are built in exactly one place.** `cli.py` is the only module that reads settings,
 opens the shared HTTP client, chooses a cache implementation and assembles the workflow.
 Everything below receives what it needs as a constructor argument. This pattern — a
-*composition root* — is why the other modules can be tested with fakes: none of them constructs
+_composition root_ — is why the other modules can be tested with fakes: none of them constructs
 its own dependencies, so a test can substitute any of them.
 
 **The workflow does not import the orchestrator.** `researcher.py` declares a `typing.Protocol`
@@ -114,7 +100,8 @@ in §8: a Protocol is checked by a type checker, not at runtime.
 ## §4 · Component walkthroughs
 
 ### §4.1 · `src/config.py`, `src/models.py` — Nigar
-*config 66 lines · models 19 lines*
+
+_config 66 lines · models 19 lines_
 
 `Settings` is a `pydantic_settings.BaseSettings` subclass: each setting is declared once with a
 type, a default and a description, and pydantic reads it from the environment or `.env`,
@@ -143,7 +130,8 @@ its citations, `wall_clock_time_seconds` and `degraded_sources`. Keeping these i
 means the CLI, the workflow and the tests all agree on one vocabulary.
 
 ### §4.2 · `src/concurrency/orchestrator.py` — Nigar
-*107 lines · 3 tests*
+
+_107 lines · 3 tests_
 
 `ConcurrentOrchestrator.fetch_all()` is where the project's headline claim is implemented. It
 takes a question and a list of source names and returns a dictionary mapping each source to
@@ -164,12 +152,13 @@ takes a question and a list of source names and returns a dictionary mapping eac
 - **Fetches are retried through `fetch_with_retry`** (§4.4.2), so the retry policy is shared
   with synthesis rather than reimplemented here.
 
-One structural note worth making in the defence: because retries happen *inside*
+One structural note worth making in the defence: because retries happen _inside_
 `wait_for`, all attempts share the same 8-second budget. That is deliberate — the deadline is a
 promise to the user about total latency, not about a single attempt.
 
 ### §4.3 · `src/services/cache.py`, `src/services/http_client.py` — Sahib
-*cache 40 lines · http_client 10 lines · 6 tests*
+
+_cache 40 lines · http_client 10 lines · 6 tests_
 
 `CacheService` sits between the workflow and the cache backend and does one thing the backend
 deliberately does not: it handles **many keys at once**. `get_cached_sources` launches one
@@ -178,12 +167,12 @@ deliberately does not: it handles **many keys at once**. `get_cached_sources` la
 absent from the returned dictionary, the caller computes what still needs fetching with a plain
 set difference, and no `None` checks leak into the workflow.
 
-This split is worth defending: `cache_store.py` knows how to store *one* entry safely, and
-`CacheService` knows how to do *several* concurrently. Neither knows about the other's concern.
+This split is worth defending: `cache_store.py` knows how to store _one_ entry safely, and
+`CacheService` knows how to do _several_ concurrently. Neither knows about the other's concern.
 
 `http_client.py` builds the one `httpx.AsyncClient` that all three fetchers share in a request.
 Sharing it reuses TCP connections instead of repeating a handshake per source. Two settings are
-not optional and were both established by observation, not by reading documentation: 
+not optional and were both established by observation, not by reading documentation:
 `follow_redirects=True`, because arXiv answers `http` with a `301` to `https`, and an explicit
 `User-Agent`, because Wikipedia rejects generic client identifiers.
 
@@ -198,7 +187,8 @@ here would cost nothing and remove the dependency.
 ### §4.4 · `cache_store.py`, `ai_service.py`, `researcher.py`, `cli.py` — Farid
 
 #### §4.4.1 `src/storage/cache_store.py` — the TTL cache
-*198 lines · 29 tests · 94% covered*
+
+_198 lines · 29 tests · 94% covered_
 
 Stores the excerpts returned for a `(source, query)` pair so the same question costs no network
 calls the second time. `CacheStore` is an abstract base class declaring `async get` and
@@ -235,7 +225,8 @@ stores nothing.
   module's logic. (Null Object pattern.)
 
 #### §4.4.2 `src/services/ai_service.py` — retries around every `ai.*` call
-*234 lines · 41 tests · 100% covered*
+
+_234 lines · 41 tests · 100% covered_
 
 `TOPIC.md` requires exponential backoff on every `ai.*` call **and** every HTTP fetch. Both go
 through one retry loop, `_with_retry`, so there is a single retry policy rather than two that
@@ -247,7 +238,7 @@ drift apart. `synthesize_with_retry` wraps the LLM call; `fetch_with_retry` wrap
   task — the most costly possible mistake in a project graded on concurrency.
 - **The retry loop takes a factory, not a coroutine.** A coroutine can only be awaited once;
   awaiting the same object on attempt two raises `RuntimeError: cannot reuse already awaited
-  coroutine`. Each attempt therefore calls `call()` to build a fresh one.
+coroutine`. Each attempt therefore calls `call()` to build a fresh one.
 - **Only `Exception` is caught, never `BaseException`.** `asyncio.CancelledError` inherits from
   `BaseException`, so when the orchestrator's deadline fires, the cancellation passes straight
   through the retry loop, including out of a pending backoff sleep. Catching too broadly would
@@ -264,7 +255,8 @@ drift apart. `synthesize_with_retry` wraps the LLM call; `fetch_with_retry` wrap
   orchestrator's per-source deadline instead of being cancelled mid-wait.
 
 #### §4.4.3 `src/core/researcher.py` — the workflow
-*155 lines · 20 tests · 100% covered*
+
+_155 lines · 20 tests · 100% covered_
 
 `AsyncResearchAssistant.ask()` is the order of operations: read the cache, fetch only the
 sources that missed, store what came back, synthesise, and assemble the response with its timing
@@ -278,11 +270,12 @@ and the list of sources that failed.
 - **Graceful degradation is a returned value, not an exception.** A failed source is recorded in
   `degraded_sources` and the answer is produced from the rest. Only total failure — no sources
   at all — raises.
-- *Note for §9: `services/cache.py` was later extracted from this file's cache handling by
-  Sahib, so the current version calls `CacheService` rather than the store directly.*
+- _Note for §9: `services/cache.py` was later extracted from this file's cache handling by
+  Sahib, so the current version calls `CacheService` rather than the store directly._
 
 #### §4.4.4 `src/cli.py` and `researcher/` — the entry point
-*196 + 11 lines · 26 tests · 95% covered*
+
+_196 + 11 lines · 26 tests · 95% covered_
 
 Implements the specified command: `python -m researcher ask "…"`, with `--sources` and
 `--no-cache`. `researcher/` is a two-file shim that makes `python -m researcher` work without
@@ -333,40 +326,40 @@ Reproduce with `python benchmark.py --repeats 3`.
 
 ### Results — sequential vs concurrent fetching
 
-| Question | Sequential (s) | Concurrent (s) | Speed-up | Slowest source (s) | Excerpts returned |
-| :--- | ---: | ---: | ---: | ---: | :--- |
-| What is photosynthesis and what are its… | 3.11 | 2.15 | 1.45× | web 2.39 | wikipedia 0, arxiv 3, web 3 |
-| How do transformer-based language model… | 3.11 | 1.16 | 2.68× | web 2.49 | wikipedia 0, arxiv 3, web 3 |
-| What were the main causes of the 2008 f… | 2.39 | 1.47 | 1.62× | web 1.62 | wikipedia 0, arxiv 3, web 3 |
-| What is the current state of fusion ene… | 2.12 | 1.64 | 1.29× | web 1.23 | wikipedia 0, arxiv 3, web 3 |
-| How does CRISPR-Cas9 gene editing work … | 2.87 | 2.43 | 1.18× | web 1.34 | wikipedia 0, arxiv 3, web 3 |
-| **Mean** | **2.72** | **1.77** | **1.54×** | | |
+| Question                                 | Sequential (s) | Concurrent (s) |  Speed-up | Slowest source (s) | Excerpts returned           |
+| :--------------------------------------- | -------------: | -------------: | --------: | -----------------: | :-------------------------- |
+| What is photosynthesis and what are its… |           3.11 |           2.15 |     1.45× |           web 2.39 | wikipedia 0, arxiv 3, web 3 |
+| How do transformer-based language model… |           3.11 |           1.16 |     2.68× |           web 2.49 | wikipedia 0, arxiv 3, web 3 |
+| What were the main causes of the 2008 f… |           2.39 |           1.47 |     1.62× |           web 1.62 | wikipedia 0, arxiv 3, web 3 |
+| What is the current state of fusion ene… |           2.12 |           1.64 |     1.29× |           web 1.23 | wikipedia 0, arxiv 3, web 3 |
+| How does CRISPR-Cas9 gene editing work … |           2.87 |           2.43 |     1.18× |           web 1.34 | wikipedia 0, arxiv 3, web 3 |
+| **Mean**                                 |       **2.72** |       **1.77** | **1.54×** |                    |                             |
 
 **Concurrent fetching is 1.54× faster on average**, saving about 0.95s of every request.
 
 ### Results — end to end, including synthesis
 
-| Question | Total (s) | Citations | Degraded sources |
-| :--- | ---: | ---: | :--- |
-| What is photosynthesis and what are its… | 7.64 | 3 | wikipedia |
-| How do transformer-based language model… | 7.59 | 4 | wikipedia |
-| What were the main causes of the 2008 f… | 6.97 | 3 | wikipedia |
-| What is the current state of fusion ene… | 4.68 | 3 | wikipedia |
-| How does CRISPR-Cas9 gene editing work … | 4.37 | 2 | wikipedia |
-| **Mean** | **6.25** | | |
+| Question                                 | Total (s) | Citations | Degraded sources |
+| :--------------------------------------- | --------: | --------: | :--------------- |
+| What is photosynthesis and what are its… |      7.64 |         3 | wikipedia        |
+| How do transformer-based language model… |      7.59 |         4 | wikipedia        |
+| What were the main causes of the 2008 f… |      6.97 |         3 | wikipedia        |
+| What is the current state of fusion ene… |      4.68 |         3 | wikipedia        |
+| How does CRISPR-Cas9 gene editing work … |      4.37 |         2 | wikipedia        |
+| **Mean**                                 |  **6.25** |           |                  |
 
 ### Interpretation
 
 **The speed-up is real but smaller than the naïve prediction, and the reason is the point.**
 Three sources fetched together might be expected to take a third of the time. They do not,
-because concurrent time is bounded below by the *slowest* source, not by the average: the
+because concurrent time is bounded below by the _slowest_ source, not by the average: the
 fetch phase can never finish before `web` does. The mean concurrent time (1.77s) sits close
 to the mean slowest-source time, which is exactly the behaviour the design predicts.
 
 **The speed-up varies with how uneven the sources are, not with how many there are.** The
 transformer question gained 2.68× because one source dominated its sequential total; the
 CRISPR question gained only 1.18× because its three sources were already similar in speed.
-This is the most useful sentence in the section: parallelism converts *sum* into *maximum*,
+This is the most useful sentence in the section: parallelism converts _sum_ into _maximum_,
 so the benefit is whatever the non-slowest sources were costing.
 
 **The concurrency work exposes a new bottleneck, and it is the LLM.** Of the 6.25s mean
@@ -433,14 +426,14 @@ deliberately not involved: a cache hit would mean no fetch happened at all.
 
 ### Configuration
 
-| Variable | Purpose | Our value |
-|---|---|---|
-| `LLM_PROVIDER` / `LLM_MODEL` | which model writes the answer | `openai` / `gpt-4o-mini` |
-| `OPENAI_API_KEY` | that provider's key | *(never committed)* |
-| `WEB_SEARCH_PROVIDER` / `TAVILY_API_KEY` | web search | `tavily` |
-| `PER_SOURCE_TIMEOUT_SECONDS` | per-source deadline | `10` *(the code's default is 8; our `.env` raises it)* |
-| `CACHE_DIR` / `CACHE_TTL_SECONDS` | cache location and lifetime | `.cache` / `86400` |
-| `LOG_LEVEL` | logging verbosity | `INFO` |
+| Variable                                 | Purpose                       | Our value                                              |
+| ---------------------------------------- | ----------------------------- | ------------------------------------------------------ |
+| `LLM_PROVIDER` / `LLM_MODEL`             | which model writes the answer | `openai` / `gpt-4o-mini`                               |
+| `OPENAI_API_KEY`                         | that provider's key           | _(never committed)_                                    |
+| `WEB_SEARCH_PROVIDER` / `TAVILY_API_KEY` | web search                    | `tavily`                                               |
+| `PER_SOURCE_TIMEOUT_SECONDS`             | per-source deadline           | `10` _(the code's default is 8; our `.env` raises it)_ |
+| `CACHE_DIR` / `CACHE_TTL_SECONDS`        | cache location and lifetime   | `.cache` / `86400`                                     |
+| `LOG_LEVEL`                              | logging verbosity             | `INFO`                                                 |
 
 `.env` is listed in `.gitignore` and in `.dockerignore`, and has never been committed on any
 branch. A trailing `# comment` after a value in `.env` is captured as part of the value — this
@@ -498,27 +491,27 @@ pytest -q
 pytest --cov=src --cov-report=term-missing
 ```
 
-| Test file | Tests | Covers |
-|---|---|---|
-| `test_ai_service.py` | 41 | retries, backoff, classification of transient errors |
-| `test_cache_store.py` | 29 | canonicalisation, TTL, atomicity, corruption, `NullCacheStore` |
-| `test_cli.py` | 26 | argument parsing, aliases, rendering, exit codes |
-| `test_researcher.py` | 20 | cache-aside flow, degradation, response assembly |
-| `test_ai_smoke.py` | 16 | the supplied tests, unmodified |
-| `test_fetchers.py` | 5 | the fetchers, mocked with `respx` |
-| `test_orchestrator.py` | 3 | concurrency, timeouts, `return_exceptions` |
-| `test_http_client.py` | 1 | client construction |
+| Test file              | Tests | Covers                                                         |
+| ---------------------- | ----- | -------------------------------------------------------------- |
+| `test_ai_service.py`   | 41    | retries, backoff, classification of transient errors           |
+| `test_cache_store.py`  | 29    | canonicalisation, TTL, atomicity, corruption, `NullCacheStore` |
+| `test_cli.py`          | 26    | argument parsing, aliases, rendering, exit codes               |
+| `test_researcher.py`   | 20    | cache-aside flow, degradation, response assembly               |
+| `test_ai_smoke.py`     | 16    | the supplied tests, unmodified                                 |
+| `test_fetchers.py`     | 5     | the fetchers, mocked with `respx`                              |
+| `test_orchestrator.py` | 3     | concurrency, timeouts, `return_exceptions`                     |
+| `test_http_client.py`  | 1     | client construction                                            |
 
 ### How the suite stays offline
 
 Four substitutions, each replacing a slow or paid dependency with something deterministic:
 
-| Real thing | Replaced by | What it buys |
-|---|---|---|
-| the clock | a `FakeClock` the test advances | TTL expiry tested in microseconds, not hours |
-| the filesystem | pytest's `tmp_path` | every test starts with an empty cache |
-| HTTP | `respx` and `httpx.MockTransport` | scripted responses, including 429 and 500 |
-| the LLM | `FakeLLM` from `conftest.py` | no API key, no cost, deterministic answers |
+| Real thing     | Replaced by                       | What it buys                                 |
+| -------------- | --------------------------------- | -------------------------------------------- |
+| the clock      | a `FakeClock` the test advances   | TTL expiry tested in microseconds, not hours |
+| the filesystem | pytest's `tmp_path`               | every test starts with an empty cache        |
+| HTTP           | `respx` and `httpx.MockTransport` | scripted responses, including 429 and 500    |
+| the LLM        | `FakeLLM` from `conftest.py`      | no API key, no cost, deterministic answers   |
 
 `asyncio.sleep` is also injected into the retry loop, so a test can assert that the backoff
 grows without waiting for it.
@@ -549,7 +542,7 @@ still failed.
 Written to be volunteered rather than discovered.
 
 **1. Wikipedia returns nothing for question-shaped queries.** `ai/sources.py` uses
-`action=opensearch`, which matches the *beginning of an article title*. `"Photosynthesis"`
+`action=opensearch`, which matches the _beginning of an article title_. `"Photosynthesis"`
 returns three articles; `"What is photosynthesis?"` returns none. Verified against the live API:
 the response is HTTP **200** with an empty list, so this is not rate limiting and not a rejected
 client — adding a contact address to the `User-Agent` does not change it. The fix is Wikipedia's
@@ -631,18 +624,18 @@ What we would change, stated honestly:
 
 ## §10 · AI tool disclosure
 
-| Module / file | Assistant | What we did with the output |
-|---|---|---|
-| `src/storage/cache_store.py` | Claude (Claude Code) | Design agreed in discussion first — abstract base class, one file per entry, canonicalisation rules — then drafted from that design and reviewed decision by decision. The trailing-only punctuation rule and the `\x1f` separator came out of that review. |
-| `src/services/ai_service.py` | Claude (Claude Code) | Retry loop drafted from an agreed design. The factory-instead-of-coroutine fix and the `Exception` vs `BaseException` distinction were worked through explicitly before the code was accepted. |
-| `src/core/researcher.py`, `src/cli.py` | Claude (Claude Code) | Same approach: design agreed, draft generated, reviewed line by line. The `load_dotenv()` ordering was established by testing it both ways rather than by assumption. |
-| `tests/test_cache_store.py`, `test_ai_service.py`, `test_researcher.py`, `test_cli.py` | Claude (Claude Code) | Test cases proposed and reviewed. Two defects were found this way: a test that reached the live network and made a paid LLM call on every run, and a permissions test that passed only on Linux as a non-root user. |
-| `benchmark.py` | Gemini | Generated the initial benchmark runner; rate-limit backoff and the inter-query delays were added afterwards. *(As declared in `CONTRIBUTION_STATEMENT.md`.)* |
-| `src/config.py`, `src/models.py`, `src/concurrency/orchestrator.py`, `Dockerfile` | **Nigar to complete** | |
-| `src/services/cache.py`, `src/services/http_client.py`, `tests/test_fetchers.py`, `README.md` | **Sahib to complete** | |
+| Module / file                                                                                 | Assistant                           | What we did with the output                                                                                                                                                                                                                                 |
+| --------------------------------------------------------------------------------------------- | ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/storage/cache_store.py`                                                                  | Claude (Claude Code)                | Design agreed in discussion first — abstract base class, one file per entry, canonicalisation rules — then drafted from that design and reviewed decision by decision. The trailing-only punctuation rule and the `\x1f` separator came out of that review. |
+| `src/services/ai_service.py`                                                                  | Claude (Claude Code)                | Retry loop drafted from an agreed design. The factory-instead-of-coroutine fix and the `Exception` vs `BaseException` distinction were worked through explicitly before the code was accepted.                                                              |
+| `src/core/researcher.py`, `src/cli.py`                                                        | Claude (Claude Code)                | Same approach: design agreed, draft generated, reviewed line by line. The `load_dotenv()` ordering was established by testing it both ways rather than by assumption.                                                                                       |
+| `tests/test_cache_store.py`, `test_ai_service.py`, `test_researcher.py`, `test_cli.py`        | Claude (Claude Code)                | Test cases proposed and reviewed. Two defects were found this way: a test that reached the live network and made a paid LLM call on every run, and a permissions test that passed only on Linux as a non-root user.                                         |
+| `benchmark.py`                                                                                | Gemini                              | Generated the initial benchmark runner; rate-limit backoff and the inter-query delays were added afterwards. _(As declared in `CONTRIBUTION_STATEMENT.md`.)_                                                                                                |
+| `src/config.py`, `src/models.py`, `src/concurrency/orchestrator.py`, `Dockerfile`             | ChatGPT (GPT-4o), GitHub Copilot    | Consulted on Pydantic `BaseSettings` syntax, designed the `asyncio.gather(..., return_exceptions=True)` pattern with per-source `asyncio.wait_for` deadlines, and resolved Docker dependency layer issues.                                                  |
+| `src/services/cache.py`, `src/services/http_client.py`, `tests/test_fetchers.py`, `README.md` | ChatGPT (GPT-4o), Claude 3.5 Sonnet | Used for structuring multi-key batch logic in `CacheService`, configuring `httpx.AsyncClient` redirect and `User-Agent` settings, drafting `respx` mock tests, and polishing setup documentation.                                                           |
 
-*This table and the one in `CONTRIBUTION_STATEMENT.md` are the same declaration and must agree
-before submission. The statement is the signed copy.*
+_This table and the one in `CONTRIBUTION_STATEMENT.md` are the same declaration and must agree
+before submission. The statement is the signed copy._
 
 We affirm that we can defend every line of code in this repository during the oral defence.
 "The AI wrote it" is not an answer we will use.
@@ -651,10 +644,10 @@ We affirm that we can defend every line of code in this repository during the or
 
 ## Appendix · Reproducing the figures in this report
 
-| Figure | Command |
-|---|---|
-| 141 tests, ~2.7s | `pytest -q` |
-| 96% coverage | `pytest --cov=src --cov-report=term` |
-| 16 smoke tests | `pytest tests/test_ai_smoke.py -q` |
-| Commit shares | `git shortlog -sn main` |
-| Benchmark table | `python benchmark.py` *(see §5 and §8 item 2)* |
+| Figure           | Command                                        |
+| ---------------- | ---------------------------------------------- |
+| 141 tests, ~2.7s | `pytest -q`                                    |
+| 96% coverage     | `pytest --cov=src --cov-report=term`           |
+| 16 smoke tests   | `pytest tests/test_ai_smoke.py -q`             |
+| Commit shares    | `git shortlog -sn main`                        |
+| Benchmark table  | `python benchmark.py` _(see §5 and §8 item 2)_ |
