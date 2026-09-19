@@ -38,7 +38,7 @@
 
 - PRs: #6, #7, #8, #9, #10, #11, #12
 
-**Approximate share of commits:** 43%
+**Approximate share of commits:** 38%
 
 ---
 
@@ -63,7 +63,7 @@
 - `requirements.txt`
 - PRs: #1, #2, #3, #4, #5, #6, #7, #8, #9, #10, #11, #12, #13, #14
 
-**Approximate share of commits:** 39%
+**Approximate share of commits:** 45%
 
 ---
 
@@ -86,7 +86,7 @@
 
 - PRs: none
 
-**Approximate share of commits:** 18%
+**Approximate share of commits:** 16%
 
 ---
 
@@ -114,5 +114,5 @@ By signing below, we affirm that:
 | Member             | Signature       | Date       |
 | :----------------- | :-------------- | :--------- |
 | Nigar Alimammadova | `@nigar001`     | 2026-09-18 |
-| Farid Dilaverli    | `@faridqul`      | 2026-09-18 |
+| Farid Dilaverli    | `@faridqul`     | 2026-09-18 |
 | Sahib Aliyev       | `@SahibAliyev5` | 2026-09-18 |
